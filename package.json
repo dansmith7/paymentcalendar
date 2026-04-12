@@ -1,9 +1,10 @@
 {
-  "name": "temp-app",
+  "name": "payment-calendar-mvp",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack --hostname 127.0.0.1 --port 3000",
+    "dev:turbo": "next dev --turbopack --hostname 127.0.0.1 --port 3000",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

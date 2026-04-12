@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Платежный календарь (MVP)
 
-## Getting Started
+MVP на Next.js + Supabase: заявки на оплату, роли сотрудник/руководитель/админ, аналитика по неделям, подготовка под Supabase Auth и синхронизацию с Google Sheets.
 
-First, run the development server:
+## Быстрый старт
+
+1. Установите зависимости:
+
+```bash
+npm install
+```
+
+2. Скопируйте env:
+
+```bash
+cp .env.example .env.local
+```
+
+3. Заполните `.env.local`:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `AUTH_MODE` (`mock` или `supabase`)
+
+4. Примените SQL-миграции в Supabase SQL Editor (в хронологическом порядке из `supabase/migrations/`), в том числе:
+- `20260408120000_init.sql`
+- далее по цепочке до актуальных файлов, например `20260413120000_payment_requests_applicant_email.sql` (колонка `applicant_email` у заявок).
+
+5. Запустите проект:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Откройте `http://127.0.0.1:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Режимы авторизации
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Mock auth (по умолчанию)
 
-## Learn More
+- Установите `AUTH_MODE=mock`.
+- Переключение ролей (`employee/manager`) доступно в сайдбаре.
+- В dev используется service role client для серверных операций, чтобы mock-пользователь мог проходить через RLS-ограничения.
 
-To learn more about Next.js, take a look at the following resources:
+### Real auth (Supabase)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Установите `AUTH_MODE=supabase`.
+- Точки подключения Supabase session/profile уже подготовлены:
+  - `lib/auth/providers/supabase-provider.ts`
+  - `lib/auth/session.ts`
+  - `lib/auth/guards.ts`
+  - `middleware.ts` + `lib/auth/middleware.ts`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Это позволяет подключить magic link точечно, без перестройки всего проекта.
 
-## Deploy on Vercel
+## Что реализовано в MVP
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Employee:
+  - создание заявки (сумма с разрядами через пробел, пустое поле при нуле)
+  - список своих заявок с фильтрами/сортировкой/недельным фильтром
+  - редактирование своей заявки
+  - запрет редактирования оплаченной заявки
+- Manager:
+  - просмотр всех заявок (поиск, недели по желаемой/критичной дате)
+  - действия руководителя по статусу, оплате, плановой дате, группе финучёта
+  - аналитика по неделям
+- Технически:
+  - service/repository слои
+  - серверная валидация
+  - loading/empty/error состояния
+  - sync-ready поля: `sync_status`, `external_id`, `last_synced_at`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Расширение под Google Sheets
+
+Подготовленные точки интеграции:
+- `lib/services/sheets-sync-service.ts`
+- `lib/services/requests-service.ts` (заявка помечается `sync_status='pending'` при create/update)
+- миграция с sync-колонками уже добавлена.
+
+## Документация по точкам замены
+
+Подробно по auth/sync extension points:
+- `docs/auth-and-sync-extension-points.md`
