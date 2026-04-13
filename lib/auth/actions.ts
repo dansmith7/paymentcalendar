@@ -44,6 +44,12 @@ export async function sendMagicLink(
   const email = String(formData.get("email") ?? "")
     .trim()
     .toLowerCase()
+  const fullName = String(formData.get("full_name") ?? "").trim()
+
+  if (!fullName) {
+    return { error: "Введите ФИО." }
+  }
+
   if (!email) {
     return { error: "Введите email." }
   }
@@ -57,6 +63,9 @@ export async function sendMagicLink(
     email,
     options: {
       emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      data: {
+        full_name: fullName,
+      },
     },
   })
 

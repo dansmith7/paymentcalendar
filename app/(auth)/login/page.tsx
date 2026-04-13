@@ -66,7 +66,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <div className="space-y-2 text-left">
               <h2 className="text-lg font-semibold tracking-tight">Вход по ссылке</h2>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Укажите email — отправим ссылку для входа без пароля.
+                Укажите ФИО и email — отправим ссылку для входа без пароля.
               </p>
             </div>
             {authError ? (

@@ -36,6 +36,20 @@ export function LoginForm({ nextPath, authMode }: LoginFormProps) {
     <form action={formAction} className="flex w-full flex-col gap-4 text-left">
       <input type="hidden" name="next" value={nextPath} />
       <div className="flex flex-col gap-2">
+        <label htmlFor="full_name" className="text-sm font-semibold text-foreground">
+          ФИО
+        </label>
+        <input
+          id="full_name"
+          name="full_name"
+          type="text"
+          autoComplete="name"
+          required
+          placeholder="Иванов Иван Иванович"
+          className="h-10 w-full rounded-lg border border-border bg-background px-3 text-[0.9375rem] shadow-sm"
+        />
+      </div>
+      <div className="flex flex-col gap-2">
         <label htmlFor="email" className="text-sm font-semibold text-foreground">
           Рабочий email
         </label>
