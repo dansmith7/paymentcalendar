@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation"
 import { AuthProvider } from "@/components/auth-provider"
 import { AppShell } from "@/components/app-shell"
 import { getCurrentSession } from "@/lib/auth/session"
@@ -24,6 +25,11 @@ async function AuthSessionBoundary({
   children: React.ReactNode
 }) {
   const session = await sessionPromise
+
+  // In real auth mode, unauthenticated users should always see the login screen.
+  if (process.env.AUTH_MODE === "supabase" && !session.user) {
+    redirect("/login")
+  }
 
   return (
     <AuthProvider

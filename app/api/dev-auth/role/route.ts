@@ -13,6 +13,10 @@ function normalizeRole(role: string | undefined): UserRole {
 }
 
 export async function POST(request: Request) {
+  if (process.env.AUTH_MODE !== "mock") {
+    return NextResponse.json({ ok: false, error: "Dev role switch is disabled" }, { status: 403 })
+  }
+
   const body = (await request.json().catch(() => ({}))) as RoleBody
   const role = normalizeRole(body.role)
   const response = NextResponse.json({ ok: true, role })
