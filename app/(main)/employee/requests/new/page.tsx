@@ -1,6 +1,6 @@
 import { PaymentRequestForm } from "@/components/employee/payment-request-form"
 import { getFinanceGroups } from "@/lib/data/payment-requests"
-import { createPaymentRequestAction } from "@/app/employee/requests/actions"
+import { createPaymentRequestAction } from "@/app/(main)/employee/requests/actions"
 
 export default async function EmployeeRequestNewPage() {
   const financeGroups = await getFinanceGroups()

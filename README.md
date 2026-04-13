@@ -21,6 +21,7 @@ cp .env.example .env.local
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `AUTH_MODE` (`mock` или `supabase`)
+- при `AUTH_MODE=supabase`: опционально `NEXT_PUBLIC_SITE_URL` (точный URL для ссылок magic link; иначе берётся из заголовков запроса)
 
 4. Примените SQL-миграции в Supabase SQL Editor (в хронологическом порядке из `supabase/migrations/`), в том числе:
 - `20260408120000_init.sql`
@@ -45,13 +46,11 @@ npm run dev
 ### Real auth (Supabase)
 
 - Установите `AUTH_MODE=supabase`.
-- Точки подключения Supabase session/profile уже подготовлены:
-  - `lib/auth/providers/supabase-provider.ts`
-  - `lib/auth/session.ts`
-  - `lib/auth/guards.ts`
-  - `middleware.ts` + `lib/auth/middleware.ts`
-
-Это позволяет подключить magic link точечно, без перестройки всего проекта.
+- Включите **Email** (magic link) в Supabase → Authentication → Providers.
+- В **URL configuration** добавьте redirect: `http://127.0.0.1:3000/auth/callback` (и боевой URL `/auth/callback` на хостинге).
+- Вход в приложении: страница **`/login`** (email → письмо со ссылкой → callback → сессия). Кнопка **«Выйти»** в шапке.
+- После регистрации триггер в миграции `20260414100000_profiles_on_auth_user_created.sql` создаёт строку в **`profiles`** с ролью **`employee`**; роль **manager** задаётся вручную в таблице `profiles`.
+- Точки кода: `lib/auth/providers/supabase-provider.ts`, `lib/auth/session.ts`, `lib/auth/guards.ts`, `middleware.ts`, `lib/supabase/middleware.ts`, `app/auth/callback/route.ts`.
 
 ## Что реализовано в MVP
 

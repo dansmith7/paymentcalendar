@@ -5,7 +5,7 @@ export default async function ManagerLayout({
 }: {
   children: React.ReactNode
 }) {
-  await requireRole(["manager"])
+  await requireRole(["manager", "admin"])
   return children
 }
 

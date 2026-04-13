@@ -4,6 +4,7 @@ import { updateSupabaseSession } from "@/lib/supabase/middleware"
 
 export async function middleware(request: NextRequest) {
   const supabaseResponse = await updateSupabaseSession(request)
+  supabaseResponse.headers.set("x-pathname", request.nextUrl.pathname)
   authMiddleware(request)
   return supabaseResponse
 }

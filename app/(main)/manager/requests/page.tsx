@@ -1,4 +1,4 @@
-import { managerUpdatePaymentRequestAction } from "@/app/manager/requests/actions"
+import { managerUpdatePaymentRequestAction } from "@/app/(main)/manager/requests/actions"
 import { ManagerTeamRequestsPanel } from "@/components/manager/manager-team-requests-panel"
 import { getAllPaymentRequests, getFinanceGroups } from "@/lib/data/payment-requests"
 

@@ -4,7 +4,7 @@ type EmployeeRequestEditPageProps = {
 
 import { notFound } from "next/navigation"
 import { PaymentRequestForm } from "@/components/employee/payment-request-form"
-import { updatePaymentRequestAction } from "@/app/employee/requests/actions"
+import { updatePaymentRequestAction } from "@/app/(main)/employee/requests/actions"
 import {
   getFinanceGroups,
   getMyPaymentRequestById,

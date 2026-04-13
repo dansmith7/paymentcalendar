@@ -5,7 +5,7 @@ export default async function EmployeeLayout({
 }: {
   children: React.ReactNode
 }) {
-  await requireRole(["employee"])
+  await requireRole(["employee", "admin"])
   return children
 }
 

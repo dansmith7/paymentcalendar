@@ -4,6 +4,8 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { DevRoleSwitcher } from "@/components/dev-role-switcher"
 import { useAuthSession } from "@/components/auth-provider"
+import { buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 type NavItem = {
   href: string
@@ -20,11 +22,13 @@ const NAV_ITEMS: NavItem[] = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { role, user } = useAuthSession()
+  const { role, user, source } = useAuthSession()
 
-  const navItems = NAV_ITEMS.filter((item) =>
-    role ? item.roles.includes(role as "employee" | "manager") : false,
-  )
+  const navItems = NAV_ITEMS.filter((item) => {
+    if (!role) return false
+    if (role === "admin") return true
+    return item.roles.includes(role as "employee" | "manager")
+  })
 
   return (
     <div className="min-h-screen bg-muted/30 text-foreground">
@@ -38,9 +42,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {user?.full_name ?? "Гость"}
             </p>
           </div>
-          <div className="shrink-0 text-right text-sm leading-snug md:text-[0.9375rem]">
-            <p className="font-medium text-foreground">Роль: {role ?? "-"}</p>
-            <p className="mt-0.5 truncate text-muted-foreground">{user?.email ?? "-"}</p>
+          <div className="flex shrink-0 flex-col items-end gap-2 text-right text-sm leading-snug md:flex-row md:items-center md:gap-3 md:text-[0.9375rem]">
+            <div>
+              <p className="font-medium text-foreground">Роль: {role ?? "-"}</p>
+              <p className="mt-0.5 truncate text-muted-foreground">{user?.email ?? "-"}</p>
+            </div>
+            {source === "supabase" && !user ? (
+              <Link href="/login" className={cn(buttonVariants({ size: "sm" }), "shrink-0")}>
+                Войти
+              </Link>
+            ) : null}
+            {source === "supabase" && user ? (
+              <form action="/auth/sign-out" method="post" className="shrink-0">
+                <button type="submit" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+                  Выйти
+                </button>
+              </form>
+            ) : null}
           </div>
         </div>
       </header>
