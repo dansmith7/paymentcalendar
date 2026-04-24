@@ -13,8 +13,8 @@ type NavItem = {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/employee/requests", label: "Мои заявки", roles: ["employee"] },
-  { href: "/employee/requests/new", label: "Новая заявка", roles: ["employee"] },
+  { href: "/employee/requests", label: "Мои заявки", roles: ["employee", "manager"] },
+  { href: "/employee/requests/new", label: "Новая заявка", roles: ["employee", "manager"] },
   { href: "/manager/requests", label: "Заявки команды", roles: ["manager"] },
   { href: "/manager/analytics", label: "Аналитика", roles: ["manager"] },
 ]

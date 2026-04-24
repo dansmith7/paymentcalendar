@@ -34,6 +34,15 @@ function filterBySearch(rows: PaymentRequest[], q: string): PaymentRequest[] {
   })
 }
 
+function formatDate(value: string | null | undefined): string {
+  if (!value) return "-"
+  return value
+}
+
+function formatBool(value: boolean): string {
+  return value ? "Да" : "Нет"
+}
+
 function partitionByStatus(rows: PaymentRequest[]) {
   const pending: PaymentRequest[] = []
   const paid: PaymentRequest[] = []
@@ -100,6 +109,7 @@ export function ManagerTeamRequestsPanel({
   const [search, setSearch] = useState("")
   const [dateField, setDateField] = useState<RequestWeekGroupingField>("desired_payment_date")
   const [selectedRequestIds, setSelectedRequestIds] = useState<string[]>([])
+  const [isExporting, setIsExporting] = useState(false)
 
   const filtered = useMemo(() => filterBySearch(rows, search), [rows, search])
 
@@ -167,6 +177,39 @@ export function ManagerTeamRequestsPanel({
     [],
   )
 
+  const handleExportAll = useCallback(async () => {
+    try {
+      setIsExporting(true)
+      const xlsx = await import("xlsx")
+      const exportRows = rows.map((row) => ({
+        Заявитель: row.applicant_name,
+        "Email заявителя": row.applicant_email ?? "-",
+        "Дата заявки": formatDate(row.request_date),
+        "Сумма, руб": Number(row.amount_rub ?? 0),
+        Получатель: row.payment_recipient,
+        Назначение: row.payment_purpose,
+        "Желаемая дата оплаты": formatDate(row.desired_payment_date),
+        "Критичная дата оплаты": formatDate(row.critical_payment_date),
+        "Плановая дата оплаты": formatDate(row.planned_payment_date),
+        "Финансовая группа": row.finance_group_name ?? "-",
+        Статус: row.status,
+        Оплачено: formatBool(Boolean(row.is_paid)),
+        "Дата оплаты": formatDate(row.paid_at),
+        Создано: formatDate(row.created_at),
+        Обновлено: formatDate(row.updated_at),
+      }))
+
+      const worksheet = xlsx.utils.json_to_sheet(exportRows)
+      const workbook = xlsx.utils.book_new()
+      xlsx.utils.book_append_sheet(workbook, worksheet, "Заявки команды")
+
+      const today = new Date().toISOString().slice(0, 10)
+      xlsx.writeFileXLSX(workbook, `team-requests-${today}.xlsx`)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [rows])
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-3 rounded-2xl border border-border bg-muted/30 p-4 md:flex-row md:flex-wrap md:items-center md:justify-between">
@@ -202,6 +245,9 @@ export function ManagerTeamRequestsPanel({
               onClick={() => setDateField("critical_payment_date")}
             >
               Критичная дата оплаты
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={handleExportAll} disabled={isExporting}>
+              {isExporting ? "Экспорт..." : "Экспорт в Excel"}
             </Button>
           </div>
         </div>
