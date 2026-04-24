@@ -32,6 +32,9 @@ export type { ManagerRequestsFilters, MyRequestsFilters }
 async function getSupabaseForData() {
   const session = await getCurrentSession()
   if (session.source === "mock") return createAdminClient()
+  // In real auth mode managers/admins work with team-wide data and manager actions.
+  // Use service-role client for server-side operations to avoid RLS mismatches between roles and app flows.
+  if (session.role === "manager" || session.role === "admin") return createAdminClient()
   return createClient()
 }
 
