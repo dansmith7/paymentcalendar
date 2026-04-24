@@ -130,6 +130,9 @@ export async function getOwnRequestById(id: string): Promise<PaymentRequest | nu
 export async function createRequest(input: unknown): Promise<void> {
   const db = await getSupabaseForData()
   const profile = await getCurrentProfile()
+  if (!["employee", "manager", "admin"].includes(profile.role)) {
+    throw new Error("Недостаточно прав для создания заявки")
+  }
   const payload = createPaymentRequestSchema.parse(input)
   assertMandatoryFields(payload)
   const financeGroupName = await findFinanceGroupName(db, payload.finance_group_id)
