@@ -3,6 +3,7 @@
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export type MagicLinkState = { error?: string } | null
 
@@ -45,13 +46,15 @@ export async function sendMagicLink(
     .trim()
     .toLowerCase()
   const fullName = String(formData.get("full_name") ?? "").trim()
-
-  if (!fullName) {
-    return { error: "Введите ФИО." }
-  }
+  const loginIntent = String(formData.get("login_intent") ?? "existing").trim()
 
   if (!email) {
     return { error: "Введите email." }
+  }
+
+  const isNewUser = loginIntent === "new"
+  if (isNewUser && !fullName) {
+    return { error: "Введите ФИО." }
   }
 
   const nextRaw = String(formData.get("next") ?? "/").trim() || "/"
@@ -59,13 +62,36 @@ export async function sendMagicLink(
 
   const origin = await resolveOrigin()
   const supabase = await createClient()
+  if (!isNewUser) {
+    // Existing-user flow: check through service role to avoid RLS restrictions for anonymous visitors.
+    const admin = createAdminClient()
+    const { data: existingProfile, error: profileError } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle()
+
+    if (profileError) {
+      return { error: "Не удалось проверить пользователя. Повторите попытку." }
+    }
+    if (!existingProfile) {
+      return {
+        error:
+          "Пользователь с таким email не найден. Выберите режим «Новый пользователь» для первой регистрации.",
+      }
+    }
+  }
+
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
       emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
-      data: {
-        full_name: fullName,
-      },
+      shouldCreateUser: isNewUser,
+      data: isNewUser
+        ? {
+            full_name: fullName,
+          }
+        : undefined,
     },
   })
 
