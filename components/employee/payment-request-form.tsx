@@ -16,6 +16,12 @@ import type { z } from "zod"
 
 type PaymentFormInput = z.input<typeof createPaymentRequestFields>
 
+function isNextRedirectError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+  const maybeDigest = (error as { digest?: unknown }).digest
+  return typeof maybeDigest === "string" && maybeDigest.startsWith("NEXT_REDIRECT")
+}
+
 type PaymentRequestFormProps = {
   mode: "create" | "edit"
   financeGroups: FinanceGroup[]
@@ -83,6 +89,10 @@ export function PaymentRequestForm({
         try {
           await onSubmitAction(buildFormData(data as CreatePaymentRequestDto))
         } catch (error) {
+          if (isNextRedirectError(error)) {
+            // Next.js uses an internal redirect error to perform navigation after server actions.
+            throw error
+          }
           const message = error instanceof Error ? error.message : "Не удалось сохранить заявку"
           setSubmitError(message)
         } finally {
