@@ -9,6 +9,7 @@ import {
   getFinanceGroups,
   getMyPaymentRequestById,
 } from "@/lib/data/payment-requests"
+import { isPaymentStarted } from "@/lib/helpers/payment-request"
 
 export default async function EmployeeRequestEditPage({
   params,
@@ -35,11 +36,10 @@ export default async function EmployeeRequestEditPage({
           mode="edit"
           financeGroups={financeGroups}
           initialValues={request}
-          readOnly={request.is_paid}
+          readOnly={isPaymentStarted(request)}
           onSubmitAction={submitAction}
         />
       </div>
     </section>
   )
 }
-

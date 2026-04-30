@@ -1,5 +1,4 @@
 import { z } from "zod"
-import { PAYMENT_REQUEST_STATUSES } from "@/lib/types"
 
 const DATE_REQUIRED = "Дата обязательна для заполнения"
 
@@ -94,10 +93,7 @@ export const updatePaymentRequestSchema = createPaymentRequestFields
 export const managerUpdatePaymentRequestSchema = z
   .object({
     id: z.string().uuid(),
-    status: z.enum(PAYMENT_REQUEST_STATUSES).optional(),
     planned_payment_date: optionalDateString.optional(),
-    is_paid: z.boolean().optional(),
-    paid_at: optionalDateString.optional(),
     finance_group_id: z
       .string()
       .uuid()
@@ -107,22 +103,24 @@ export const managerUpdatePaymentRequestSchema = z
       .transform((value) => (value === "" ? null : value)),
     finance_group_name: z.string().trim().optional().nullable(),
   })
-  .superRefine((data, ctx) => {
-    if (data.status === "paid") {
-      const raw = data.paid_at
-      const ok = typeof raw === "string" && raw.trim().length > 0
-      if (!ok) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Заполните обязательное поле «Дата оплаты факт».",
-          path: ["paid_at"],
-        })
-      }
-    }
-  })
+
+export const addPaymentRequestPaymentSchema = z.object({
+  id: z.string().uuid(),
+  paid_at: z.preprocess(nullToEmptyString, requiredIsoDate),
+  amount_rub: z
+    .number()
+    .finite("Сумма оплаты должна быть числом")
+    .positive("Сумма оплаты должна быть больше нуля"),
+  note: z
+    .preprocess(nullToEmptyString, z.string().trim())
+    .transform((value) => (value === "" ? null : value))
+    .nullable()
+    .optional(),
+})
 
 export type CreatePaymentRequestDto = z.infer<typeof createPaymentRequestSchema>
 export type UpdatePaymentRequestDto = z.infer<typeof updatePaymentRequestSchema>
 export type ManagerUpdatePaymentRequestDto = z.infer<
   typeof managerUpdatePaymentRequestSchema
 >
+export type AddPaymentRequestPaymentDto = z.infer<typeof addPaymentRequestPaymentSchema>

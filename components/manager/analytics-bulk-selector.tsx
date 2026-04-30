@@ -100,8 +100,8 @@ export function AnalyticsBulkSelector({ rows }: AnalyticsBulkSelectorProps) {
 
 function statusLabel(status: PaymentRequest["status"]) {
   if (status === "in_progress") return "В работе"
+  if (status === "partially_paid") return "Частично оплачено"
   if (status === "rejected") return "Отклонено"
   if (status === "paid") return "Оплачено"
   return status
 }
-

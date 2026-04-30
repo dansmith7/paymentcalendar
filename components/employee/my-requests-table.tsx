@@ -1,10 +1,20 @@
 import Link from "next/link"
 import { buttonVariants } from "@/components/ui/button"
-import { toDisplayDate } from "@/lib/helpers/payment-request"
+import {
+  getPaidAmountRub,
+  getRemainingAmountRub,
+  isPaymentStarted,
+  toDisplayDate,
+} from "@/lib/helpers/payment-request"
 import { FINANCE_GROUP_FIELD_LABEL } from "@/lib/ui-labels"
 import type { PaymentRequest } from "@/lib/types"
 
-export function MyRequestsTable({ rows }: { rows: PaymentRequest[] }) {
+type MyRequestsTableProps = {
+  rows: PaymentRequest[]
+  onDuplicate: (id: string) => Promise<void>
+}
+
+export function MyRequestsTable({ rows, onDuplicate }: MyRequestsTableProps) {
   if (!rows.length) {
     return (
       <div className="rounded-xl border border-border p-4 text-[0.9375rem] text-muted-foreground">
@@ -26,6 +36,8 @@ export function MyRequestsTable({ rows }: { rows: PaymentRequest[] }) {
             <Th>Критичная дата</Th>
             <Th>Планируемая дата</Th>
             <Th>Оплачено</Th>
+            <Th>Сумма оплачено</Th>
+            <Th>Остаток</Th>
             <Th>Статус</Th>
             <Th className="max-w-[11rem] text-balance">{FINANCE_GROUP_FIELD_LABEL}</Th>
             <Th />
@@ -47,15 +59,29 @@ export function MyRequestsTable({ rows }: { rows: PaymentRequest[] }) {
               <Td>{toDisplayDate(row.critical_payment_date)}</Td>
               <Td>{toDisplayDate(row.planned_payment_date)}</Td>
               <Td>{row.is_paid ? "Да" : "Нет"}</Td>
+              <Td>
+                {isPaymentStarted(row)
+                  ? `${getPaidAmountRub(row).toLocaleString("ru-RU")} ₽`
+                  : "-"}
+              </Td>
+              <Td>{`${getRemainingAmountRub(row).toLocaleString("ru-RU")} ₽`}</Td>
               <Td>{statusLabel(row.status)}</Td>
               <Td>{row.finance_group_name ?? "-"}</Td>
-              <Td>
+              <Td className="min-w-36">
                 <Link
                   href={`/employee/requests/${row.id}/edit`}
                   className={buttonVariants({ size: "xs", variant: "outline" })}
                 >
-                  {row.is_paid ? "Просмотр" : "Редактировать"}
+                  {isPaymentStarted(row) ? "Просмотр" : "Редактировать"}
                 </Link>
+                <form action={onDuplicate.bind(null, row.id)} className="mt-2">
+                  <button
+                    type="submit"
+                    className={buttonVariants({ size: "xs", variant: "outline" })}
+                  >
+                    Сделать копию
+                  </button>
+                </form>
               </Td>
             </tr>
           ))}
@@ -67,6 +93,7 @@ export function MyRequestsTable({ rows }: { rows: PaymentRequest[] }) {
 
 function statusLabel(status: PaymentRequest["status"]) {
   if (status === "in_progress") return "В работе"
+  if (status === "partially_paid") return "Частично оплачено"
   if (status === "rejected") return "Отклонено"
   if (status === "paid") return "Оплачено"
   return status
@@ -103,4 +130,3 @@ function Td({
     </td>
   )
 }
-

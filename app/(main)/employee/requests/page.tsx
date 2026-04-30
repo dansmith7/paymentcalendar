@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Button, buttonVariants } from "@/components/ui/button"
+import { duplicatePaymentRequestAction } from "@/app/(main)/employee/requests/actions"
 import { getFinanceGroups, getMyPaymentRequests } from "@/lib/data/payment-requests"
 import { MyRequestsTable } from "@/components/employee/my-requests-table"
 import { buildWeekFilterOptions } from "@/lib/helpers/week-filter"
@@ -27,6 +28,7 @@ export default async function EmployeeRequestsPage({
     sort: params.sort ?? "request_date_desc",
   } as const
   const showSubmittedBanner = params.submitted === "1" || params.submitted === "true"
+  const showCopyBanner = params.submitted === "copy"
 
   const baseFilters = {
     search: filters.search,
@@ -47,9 +49,11 @@ export default async function EmployeeRequestsPage({
       <h1>Мои заявки</h1>
       <p className="page-lead">Список ваших платежных заявок.</p>
 
-      {showSubmittedBanner ? (
+      {showSubmittedBanner || showCopyBanner ? (
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-3.5 text-[0.9375rem] text-emerald-950 shadow-sm dark:border-emerald-900 dark:bg-emerald-950/45 dark:text-emerald-100">
-          <p className="font-semibold">Ваша заявка отправлена.</p>
+          <p className="font-semibold">
+            {showCopyBanner ? "Копия заявки создана." : "Ваша заявка отправлена."}
+          </p>
           <Link
             href="/employee/requests"
             className={buttonVariants({ variant: "outline", size: "sm" })}
@@ -120,9 +124,8 @@ export default async function EmployeeRequestsPage({
       </form>
 
       <div className="mt-4">
-        <MyRequestsTable rows={rows} />
+        <MyRequestsTable rows={rows} onDuplicate={duplicatePaymentRequestAction} />
       </div>
     </section>
   )
 }
-

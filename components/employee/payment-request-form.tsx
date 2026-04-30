@@ -195,7 +195,7 @@ export function PaymentRequestForm({
         </Button>
       ) : (
         <div className="rounded-lg border border-amber-300/80 bg-amber-50 px-3 py-2.5 text-[0.9375rem] text-amber-900 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-200">
-          Заявка оплачена, редактирование недоступно.
+          По заявке уже есть оплата, редактирование недоступно.
         </div>
       )}
     </form>

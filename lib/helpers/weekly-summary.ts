@@ -8,6 +8,7 @@ import {
   startOfWeek,
 } from "date-fns"
 import { ru } from "date-fns/locale"
+import { getPaidAmountRub, getRemainingAmountRub } from "@/lib/helpers/payment-request"
 import type { PaymentRequest } from "@/lib/types"
 
 const MONTHS_RU = [
@@ -93,19 +94,17 @@ export function buildWeeklySummary(
   const totals = createEmptyTotals()
 
   for (const row of rows) {
-    const amount = Number(row.amount_rub ?? 0)
-    const isPaid = row.is_paid
-    addToTotals(totals, amount, isPaid)
+    addRequestToTotals(totals, row)
 
     const rawDate = row[field]
     if (!rawDate) {
-      addToTotals(undated, amount, isPaid)
+      addRequestToTotals(undated, row)
       continue
     }
 
     const date = parsePaymentDateForCalendar(String(rawDate))
     if (!date) {
-      addToTotals(undated, amount, isPaid)
+      addRequestToTotals(undated, row)
       continue
     }
 
@@ -115,7 +114,7 @@ export function buildWeeklySummary(
 
     const existing = byWeek.get(weekKey)
     if (existing) {
-      addToTotals(existing, amount, isPaid)
+      addRequestToTotals(existing, row)
       continue
     }
 
@@ -125,7 +124,7 @@ export function buildWeeklySummary(
       weekLabel,
       ...createEmptyTotals(),
     }
-    addToTotals(block, amount, isPaid)
+    addRequestToTotals(block, row)
     byWeek.set(weekKey, block)
   }
 
@@ -188,7 +187,7 @@ function createEmptyTotals() {
   }
 }
 
-function addToTotals(
+function addRequestToTotals(
   target: {
     totalAmount: number
     paidAmount: number
@@ -197,18 +196,28 @@ function addToTotals(
     paidCount: number
     unpaidCount: number
   },
-  amount: number,
-  isPaid: boolean,
+  row: PaymentRequest,
 ) {
+  const amount = Number(row.amount_rub ?? 0)
+  const paidAmount = getPaidAmountRub(row)
+  const unpaidAmount = getRemainingAmountRub(row)
   target.totalAmount += amount
   target.totalCount += 1
-  if (isPaid) {
-    target.paidAmount += amount
+  if (row.is_paid || row.status === "paid") {
+    target.paidAmount += paidAmount
     target.paidCount += 1
-  } else {
-    target.unpaidAmount += amount
-    target.unpaidCount += 1
+    return
   }
+  if (row.status === "partially_paid") {
+    target.paidAmount += paidAmount
+    target.unpaidAmount += unpaidAmount
+    target.paidCount += 1
+    target.unpaidCount += 1
+    return
+  }
+
+  target.unpaidAmount += unpaidAmount
+    target.unpaidCount += 1
 }
 
 function getCalendarWeekOfMonth(date: Date): number {
@@ -231,4 +240,3 @@ function getWeekRangeLabel(date: Date): string {
 
   return `${format(start, "d MMM", { locale: ru })} - ${format(end, "d MMM", { locale: ru })}`
 }
-

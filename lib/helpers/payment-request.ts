@@ -42,8 +42,42 @@ export function resolvePaymentStatus(
   isPaid: boolean,
 ): PaymentRequestStatus {
   if (isPaid) return "paid"
+  if (status === "partially_paid") return "partially_paid"
   if (status === "rejected") return "rejected"
   return "in_progress"
+}
+
+export function isPaymentStarted(row: Pick<PaymentRequest, "is_paid" | "status">): boolean {
+  return Boolean(row.is_paid || row.status === "paid" || row.status === "partially_paid")
+}
+
+export function getPaidAmountRub(
+  row: Pick<PaymentRequest, "amount_rub" | "paid_amount_rub" | "is_paid" | "status" | "payments">,
+): number {
+  const legacyPaidAmount = isPaymentStarted(row)
+    ? Number(row.paid_amount_rub ?? row.amount_rub ?? 0)
+    : 0
+  if (row.payments?.length) {
+    const paymentsAmount = row.payments.reduce((sum, payment) => sum + Number(payment.amount_rub ?? 0), 0)
+    return Math.max(paymentsAmount, legacyPaidAmount)
+  }
+  if (!isPaymentStarted(row)) return 0
+  return legacyPaidAmount
+}
+
+export function getRemainingAmountRub(
+  row: Pick<PaymentRequest, "amount_rub" | "paid_amount_rub" | "is_paid" | "status" | "payments">,
+): number {
+  const amount = Number(row.amount_rub ?? 0)
+  return Math.max(0, amount - getPaidAmountRub(row))
+}
+
+export function derivePaymentStatusFromAmounts(row: PaymentRequest): PaymentRequestStatus {
+  if (row.status === "rejected") return "rejected"
+  const paidAmount = getPaidAmountRub(row)
+  if (paidAmount <= 0) return "in_progress"
+  if (paidAmount >= Number(row.amount_rub ?? 0)) return "paid"
+  return "partially_paid"
 }
 
 export function resolvePaidFields(

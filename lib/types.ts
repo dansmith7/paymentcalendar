@@ -1,7 +1,7 @@
 export const USER_ROLES = ["employee", "manager", "admin"] as const
 export type UserRole = (typeof USER_ROLES)[number]
 
-export const PAYMENT_REQUEST_STATUSES = ["in_progress", "rejected", "paid"] as const
+export const PAYMENT_REQUEST_STATUSES = ["in_progress", "partially_paid", "rejected", "paid"] as const
 export type PaymentRequestStatus = (typeof PAYMENT_REQUEST_STATUSES)[number]
 
 export type Profile = {
@@ -34,6 +34,7 @@ export type PaymentRequest = {
   finance_group_id: string | null
   finance_group_name: string | null
   planned_payment_date: string | null
+  paid_amount_rub: number | null
   is_paid: boolean
   paid_at: string | null
   status: PaymentRequestStatus
@@ -44,4 +45,17 @@ export type PaymentRequest = {
   updated_at: string
   /** Если задано — заявка скрыта из выборок (мягкое удаление), строка в БД остаётся */
   deleted_at?: string | null
+  payments?: PaymentRequestPayment[]
+}
+
+export type PaymentRequestPayment = {
+  id: string
+  request_id: string
+  paid_at: string
+  amount_rub: number
+  note: string | null
+  created_by: string | null
+  created_at: string
+  canceled_at?: string | null
+  canceled_by?: string | null
 }

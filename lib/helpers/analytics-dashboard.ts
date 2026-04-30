@@ -1,4 +1,5 @@
 import { format } from "date-fns"
+import { getPaidAmountRub, getRemainingAmountRub } from "@/lib/helpers/payment-request"
 import { getWeekKeyFromDate } from "@/lib/helpers/weekly-summary"
 import type { PaymentRequest } from "@/lib/types"
 
@@ -58,16 +59,24 @@ export function buildAnalyticsDashboardScores(
   if (!activeWeekKey) return result
 
   for (const row of rows) {
-    const amount = Number(row.amount_rub ?? 0)
+    const amount = getRemainingAmountRub(row)
 
     if (isRowPaid(row)) {
       if (scopePaidToSelectedWeek) {
         const desiredWeek = getWeekKeyFromDate(row.desired_payment_date)
         if (desiredWeek !== activeWeekKey) continue
       }
-      result.paid.amount += amount
+      result.paid.amount += getPaidAmountRub(row)
       result.paid.count += 1
       continue
+    }
+
+    if (row.status === "partially_paid") {
+      const desiredWeek = getWeekKeyFromDate(row.desired_payment_date)
+      if (!scopePaidToSelectedWeek || desiredWeek === activeWeekKey) {
+        result.paid.amount += getPaidAmountRub(row)
+        result.paid.count += 1
+      }
     }
 
     if (!isUnpaidOpen(row)) continue

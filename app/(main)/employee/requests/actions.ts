@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import {
   createPaymentRequest,
+  duplicateMyPaymentRequest,
   updateMyPaymentRequest,
 } from "@/lib/data/payment-requests"
 
@@ -37,3 +38,8 @@ export async function updatePaymentRequestAction(id: string, formData: FormData)
   redirect("/employee/requests")
 }
 
+export async function duplicatePaymentRequestAction(id: string) {
+  await duplicateMyPaymentRequest(id)
+  revalidatePath("/employee/requests")
+  redirect("/employee/requests?submitted=copy")
+}

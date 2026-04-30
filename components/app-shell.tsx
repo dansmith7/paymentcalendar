@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuthSession } from "@/components/auth-provider"
+import { DevRoleSwitcher } from "@/components/dev-role-switcher"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -82,6 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               )
             })}
           </nav>
+          <DevRoleSwitcher />
         </aside>
 
         <main className="min-w-0 rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
@@ -91,4 +93,3 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   )
 }
-

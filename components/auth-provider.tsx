@@ -10,7 +10,7 @@ type AuthContextValue = {
   role: UserRole | null
   source: SessionSource
   isSwitchingRole: boolean
-  switchRole: (role: "employee" | "manager") => Promise<void>
+  switchRole: (role: UserRole) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -32,7 +32,7 @@ export function AuthProvider({
   const [role, setRole] = useState<UserRole | null>(initialRole)
   const [isSwitchingRole, setIsSwitchingRole] = useState(false)
 
-  async function switchRole(nextRole: "employee" | "manager") {
+  async function switchRole(nextRole: UserRole) {
     setIsSwitchingRole(true)
     try {
       const response = await fetch("/api/dev-auth/role", {
@@ -73,4 +73,3 @@ export function useAuthSession(): AuthContextValue {
   }
   return context
 }
-

@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
+import { assertSupabaseWritesAllowed } from "@/lib/dev-write-guard"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -55,6 +56,13 @@ export async function sendMagicLink(
   const isNewUser = loginIntent === "new"
   if (isNewUser && !fullName) {
     return { error: "Введите ФИО." }
+  }
+  if (isNewUser) {
+    try {
+      assertSupabaseWritesAllowed("Регистрация нового пользователя")
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Регистрация отключена в dev режиме." }
+    }
   }
 
   const nextRaw = String(formData.get("next") ?? "/").trim() || "/"

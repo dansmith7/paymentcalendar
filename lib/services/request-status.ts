@@ -26,6 +26,19 @@ export function markAsUnpaid(): {
   }
 }
 
+export function markAsPartiallyPaid(paidAt?: string | null): {
+  is_paid: boolean
+  paid_at: string | null
+  status: PaymentRequestStatus
+} {
+  const paid = resolvePaidFields(true, paidAt)
+  return {
+    is_paid: false,
+    paid_at: paid.paid_at,
+    status: "partially_paid",
+  }
+}
+
 export function deriveStatus(
   currentStatus: PaymentRequestStatus | null | undefined,
   isPaid: boolean,
@@ -33,4 +46,3 @@ export function deriveStatus(
   if (isPaid) return "paid"
   return resolvePaymentStatus(currentStatus, false)
 }
-

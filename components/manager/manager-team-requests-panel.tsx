@@ -7,12 +7,17 @@ import {
   groupRequestsByWeek,
   type RequestWeekGroupingField,
 } from "@/lib/helpers/group-requests-by-week"
-import type { FinanceGroup, PaymentRequest } from "@/lib/types"
+import { getPaidAmountRub, getRemainingAmountRub } from "@/lib/helpers/payment-request"
+import type { FinanceGroup, PaymentRequest, UserRole } from "@/lib/types"
 
 type ManagerTeamRequestsPanelProps = {
   rows: PaymentRequest[]
   financeGroups: FinanceGroup[]
+  currentRole: UserRole | null
   onUpdate: (id: string, formData: FormData) => Promise<void> | void
+  onAddPayment: (id: string, formData: FormData) => Promise<void> | void
+  onCancelPayment: (id: string, paymentId: string) => Promise<void> | void
+  onSoftDelete: (id: string) => Promise<void> | void
 }
 
 function formatRub(amount: number) {
@@ -41,6 +46,23 @@ function formatDate(value: string | null | undefined): string {
 
 function formatBool(value: boolean): string {
   return value ? "Да" : "Нет"
+}
+
+function formatPaymentsHistory(row: PaymentRequest): string {
+  const payments = row.payments ?? []
+  const paymentsAmount = payments.reduce((sum, payment) => sum + Number(payment.amount_rub ?? 0), 0)
+  const legacyPaymentDelta = Math.max(0, getPaidAmountRub(row) - paymentsAmount)
+  const items: string[] = []
+  if (legacyPaymentDelta > 0) {
+    items.push(`${formatDate(row.paid_at)} — ${formatRub(legacyPaymentDelta)} (ранее учтено)`)
+  }
+  if (!payments.length && getPaidAmountRub(row) > 0) {
+    return items.join("; ")
+  }
+  items.push(...payments
+    .map((payment) => `${formatDate(payment.paid_at)} — ${formatRub(Number(payment.amount_rub ?? 0))}`)
+  )
+  return items.join("; ")
 }
 
 function partitionByStatus(rows: PaymentRequest[]) {
@@ -104,7 +126,11 @@ function WeekSelectAllCheckbox({
 export function ManagerTeamRequestsPanel({
   rows,
   financeGroups,
+  currentRole,
   onUpdate,
+  onAddPayment,
+  onCancelPayment,
+  onSoftDelete,
 }: ManagerTeamRequestsPanelProps) {
   const [search, setSearch] = useState("")
   const [dateField, setDateField] = useState<RequestWeekGroupingField>("desired_payment_date")
@@ -126,12 +152,12 @@ export function ManagerTeamRequestsPanel({
     const map = new Map<string, WeekSelectionStats>()
     for (const group of weekGroups) {
       const ids = group.requests.map((r) => r.id)
-      const totalAmount = group.requests.reduce((s, r) => s + Number(r.amount_rub ?? 0), 0)
+      const totalAmount = group.requests.reduce((s, r) => s + getRemainingAmountRub(r), 0)
       let selectedAmount = 0
       let selectedCount = 0
       for (const r of group.requests) {
         if (selectedSet.has(r.id)) {
-          selectedAmount += Number(r.amount_rub ?? 0)
+          selectedAmount += getRemainingAmountRub(r)
           selectedCount += 1
         }
       }
@@ -151,7 +177,7 @@ export function ManagerTeamRequestsPanel({
     let sum = 0
     for (const id of selectedRequestIds) {
       const row = pending.find((r) => r.id === id)
-      if (row) sum += Number(row.amount_rub ?? 0)
+      if (row) sum += getRemainingAmountRub(row)
     }
     return sum
   }, [selectedRequestIds, pending])
@@ -181,7 +207,9 @@ export function ManagerTeamRequestsPanel({
     try {
       setIsExporting(true)
       const xlsx = await import("xlsx")
-      const exportRows = rows.map((row) => ({
+      const exportRows = rows
+        .filter((row) => row.status !== "rejected")
+        .map((row) => ({
         Заявитель: row.applicant_name,
         "Email заявителя": row.applicant_email ?? "-",
         "Дата заявки": formatDate(row.request_date),
@@ -195,6 +223,11 @@ export function ManagerTeamRequestsPanel({
         Статус: row.status,
         Оплачено: formatBool(Boolean(row.is_paid)),
         "Дата оплаты": formatDate(row.paid_at),
+        "Сумма оплачено, руб": row.is_paid || row.status === "paid" || row.status === "partially_paid"
+          ? getPaidAmountRub(row)
+          : null,
+        "Остаток к оплате, руб": getRemainingAmountRub(row),
+        "История оплат": formatPaymentsHistory(row),
         Создано: formatDate(row.created_at),
         Обновлено: formatDate(row.updated_at),
       }))
@@ -331,6 +364,10 @@ export function ManagerTeamRequestsPanel({
                         row={row}
                         financeGroups={financeGroups}
                         onUpdate={onUpdate}
+                        onAddPayment={onAddPayment}
+                        onCancelPayment={onCancelPayment}
+                        canSoftDelete={currentRole === "admin"}
+                        onSoftDelete={onSoftDelete}
                         selection={{
                           checked: selectedSet.has(row.id),
                           onChange: () => toggleRequest(row.id),
@@ -359,6 +396,10 @@ export function ManagerTeamRequestsPanel({
                 row={row}
                 financeGroups={financeGroups}
                 onUpdate={onUpdate}
+                onAddPayment={onAddPayment}
+                onCancelPayment={onCancelPayment}
+                canSoftDelete={currentRole === "admin"}
+                onSoftDelete={onSoftDelete}
               />
             ))}
           </div>
@@ -379,6 +420,10 @@ export function ManagerTeamRequestsPanel({
                 row={row}
                 financeGroups={financeGroups}
                 onUpdate={onUpdate}
+                onAddPayment={onAddPayment}
+                onCancelPayment={onCancelPayment}
+                canSoftDelete={currentRole === "admin"}
+                onSoftDelete={onSoftDelete}
               />
             ))}
           </div>

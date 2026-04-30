@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { FinanceGroup, PaymentRequest } from "@/lib/types"
+import { assertSupabaseWritesAllowed } from "@/lib/dev-write-guard"
+import type { FinanceGroup, PaymentRequest, PaymentRequestPayment } from "@/lib/types"
 
 export type MyRequestsFilters = {
   search?: string
@@ -40,7 +41,52 @@ export async function insertRequest(
   db: SupabaseClient,
   payload: Record<string, unknown>,
 ): Promise<void> {
+  assertSupabaseWritesAllowed("Создание заявки")
   const { error } = await db.from("payment_requests").insert(payload)
+  if (error) throw new Error(error.message)
+}
+
+export async function fetchPaymentsForRequests(
+  db: SupabaseClient,
+  requestIds: string[],
+): Promise<PaymentRequestPayment[]> {
+  if (!requestIds.length) return []
+  const { data, error } = await db
+    .from("payment_request_payments")
+    .select("*")
+    .in("request_id", requestIds)
+    .is("canceled_at", null)
+    .order("paid_at", { ascending: true })
+    .order("created_at", { ascending: true })
+  if (error) throw new Error(error.message)
+  return (data ?? []) as PaymentRequestPayment[]
+}
+
+export async function insertPayment(
+  db: SupabaseClient,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  assertSupabaseWritesAllowed("Добавление оплаты")
+  const { error } = await db.from("payment_request_payments").insert(payload)
+  if (error) throw new Error(error.message)
+}
+
+export async function cancelPaymentById(
+  db: SupabaseClient,
+  requestId: string,
+  paymentId: string,
+  canceledBy: string | null,
+): Promise<void> {
+  assertSupabaseWritesAllowed("Отмена оплаты")
+  const { error } = await db
+    .from("payment_request_payments")
+    .update({
+      canceled_at: new Date().toISOString(),
+      canceled_by: canceledBy,
+    })
+    .eq("id", paymentId)
+    .eq("request_id", requestId)
+    .is("canceled_at", null)
   if (error) throw new Error(error.message)
 }
 
@@ -49,7 +95,11 @@ export async function fetchMyRequests(
   applicantId: string,
   filters: MyRequestsFilters,
 ): Promise<PaymentRequest[]> {
-  let query = db.from("payment_requests").select("*").eq("applicant_id", applicantId)
+  let query = db
+    .from("payment_requests")
+    .select("*")
+    .eq("applicant_id", applicantId)
+    .is("deleted_at", null)
 
   if (filters.search?.trim()) {
     const q = filters.search.trim()
@@ -71,7 +121,12 @@ export async function fetchRequestById(
   db: SupabaseClient,
   id: string,
 ): Promise<PaymentRequest | null> {
-  const { data, error } = await db.from("payment_requests").select("*").eq("id", id).maybeSingle()
+  const { data, error } = await db
+    .from("payment_requests")
+    .select("*")
+    .eq("id", id)
+    .is("deleted_at", null)
+    .maybeSingle()
 
   if (error) throw new Error(error.message)
   return (data as PaymentRequest | null) ?? null
@@ -81,7 +136,7 @@ export async function fetchAllRequests(
   db: SupabaseClient,
   filters: ManagerRequestsFilters,
 ): Promise<PaymentRequest[]> {
-  let query = db.from("payment_requests").select("*")
+  let query = db.from("payment_requests").select("*").is("deleted_at", null)
 
   if (filters.search?.trim()) {
     const q = filters.search.trim()
@@ -114,6 +169,7 @@ export async function updateRequestById(
   id: string,
   payload: Record<string, unknown>,
 ): Promise<void> {
+  assertSupabaseWritesAllowed("Обновление заявки")
   const { error } = await db.from("payment_requests").update(payload).eq("id", id)
   if (error) throw new Error(error.message)
 }
@@ -124,11 +180,26 @@ export async function updateOwnRequestById(
   applicantId: string,
   payload: Record<string, unknown>,
 ): Promise<void> {
+  assertSupabaseWritesAllowed("Обновление заявки")
   const { error } = await db
     .from("payment_requests")
     .update(payload)
     .eq("id", id)
     .eq("applicant_id", applicantId)
+
+  if (error) throw new Error(error.message)
+}
+
+export async function softDeleteRequestById(
+  db: SupabaseClient,
+  id: string,
+): Promise<void> {
+  assertSupabaseWritesAllowed("Скрытие заявки")
+  const { error } = await db
+    .from("payment_requests")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("deleted_at", null)
 
   if (error) throw new Error(error.message)
 }
@@ -194,7 +265,7 @@ export async function insertProfile(
   db: SupabaseClient,
   payload: Record<string, unknown>,
 ): Promise<void> {
+  assertSupabaseWritesAllowed("Создание профиля")
   const { error } = await db.from("profiles").insert(payload)
   if (error) throw new Error(error.message)
 }
-
