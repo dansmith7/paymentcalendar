@@ -3,6 +3,7 @@ import {
   adminSoftDeletePaymentRequestAction,
   cancelPaymentRequestPaymentAction,
   managerUpdatePaymentRequestAction,
+  paySelectedPaymentRequestsInFullAction,
 } from "@/app/(main)/manager/requests/actions"
 import { ManagerTeamRequestsPanel } from "@/components/manager/manager-team-requests-panel"
 import { getCurrentSession } from "@/lib/auth/session"
@@ -30,6 +31,7 @@ export default async function ManagerRequestsPage() {
           onUpdate={managerUpdatePaymentRequestAction}
           onAddPayment={addPaymentToPaymentRequestAction}
           onCancelPayment={cancelPaymentRequestPaymentAction}
+          onPaySelectedInFull={paySelectedPaymentRequestsInFullAction}
           onSoftDelete={adminSoftDeletePaymentRequestAction}
         />
       </div>

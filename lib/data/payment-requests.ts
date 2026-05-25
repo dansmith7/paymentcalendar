@@ -7,6 +7,7 @@ import {
   getOwnRequestById,
   addPaymentToRequest,
   cancelPaymentInRequest,
+  payRequestsInFull,
   softDeleteRequest,
   updateManagerFields,
   updateOwnRequest,
@@ -27,3 +28,4 @@ export const managerUpdatePaymentRequest = updateManagerFields
 export const softDeletePaymentRequest = softDeleteRequest
 export const addPaymentToPaymentRequest = addPaymentToRequest
 export const cancelPaymentRequestPayment = cancelPaymentInRequest
+export const payPaymentRequestsInFull = payRequestsInFull

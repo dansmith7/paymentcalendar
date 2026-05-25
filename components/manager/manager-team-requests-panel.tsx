@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { ManagerRequestItem } from "@/components/manager/manager-request-item"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,6 +17,7 @@ type ManagerTeamRequestsPanelProps = {
   onUpdate: (id: string, formData: FormData) => Promise<void> | void
   onAddPayment: (id: string, formData: FormData) => Promise<void> | void
   onCancelPayment: (id: string, paymentId: string) => Promise<void> | void
+  onPaySelectedInFull: (ids: string[]) => Promise<void> | void
   onSoftDelete: (id: string) => Promise<void> | void
 }
 
@@ -130,12 +131,15 @@ export function ManagerTeamRequestsPanel({
   onUpdate,
   onAddPayment,
   onCancelPayment,
+  onPaySelectedInFull,
   onSoftDelete,
 }: ManagerTeamRequestsPanelProps) {
   const [search, setSearch] = useState("")
   const [dateField, setDateField] = useState<RequestWeekGroupingField>("desired_payment_date")
   const [selectedRequestIds, setSelectedRequestIds] = useState<string[]>([])
   const [isExporting, setIsExporting] = useState(false)
+  const [bulkError, setBulkError] = useState<string | null>(null)
+  const [isBulkPaying, startBulkPayTransition] = useTransition()
 
   const filtered = useMemo(() => filterBySearch(rows, search), [rows, search])
 
@@ -180,6 +184,11 @@ export function ManagerTeamRequestsPanel({
       if (row) sum += getRemainingAmountRub(row)
     }
     return sum
+  }, [selectedRequestIds, pending])
+
+  const payableSelectedIds = useMemo(() => {
+    const pendingIds = new Set(pending.map((row) => row.id))
+    return selectedRequestIds.filter((id) => pendingIds.has(id))
   }, [selectedRequestIds, pending])
 
   const toggleRequest = useCallback((id: string) => {
@@ -243,6 +252,23 @@ export function ManagerTeamRequestsPanel({
     }
   }, [rows])
 
+  const handlePaySelectedInFull = useCallback(() => {
+    if (!payableSelectedIds.length) {
+      setBulkError("Выберите заявки к оплате.")
+      return
+    }
+
+    setBulkError(null)
+    startBulkPayTransition(async () => {
+      try {
+        await onPaySelectedInFull(payableSelectedIds)
+        setSelectedRequestIds([])
+      } catch (err) {
+        setBulkError(err instanceof Error ? err.message : "Не удалось оплатить выбранные заявки")
+      }
+    })
+  }, [onPaySelectedInFull, payableSelectedIds])
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-3 rounded-2xl border border-border bg-muted/30 p-4 md:flex-row md:flex-wrap md:items-center md:justify-between">
@@ -296,13 +322,26 @@ export function ManagerTeamRequestsPanel({
             </p>
           </div>
           {selectedRequestIds.length > 0 ? (
-            <p className="text-sm font-medium text-foreground md:text-[0.9375rem]">
-              Выбрано заявок:{" "}
-              <span className="font-semibold">{selectedRequestIds.length}</span>
-              {" · "}
-              на сумму{" "}
-              <span className="font-semibold text-primary">{formatRub(globalSelectedAmount)}</span>
-            </p>
+            <div className="flex flex-col items-start gap-2 sm:items-end">
+              <p className="text-sm font-medium text-foreground md:text-[0.9375rem]">
+                Выбрано заявок:{" "}
+                <span className="font-semibold">{selectedRequestIds.length}</span>
+                {" · "}
+                на сумму{" "}
+                <span className="font-semibold text-primary">{formatRub(globalSelectedAmount)}</span>
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handlePaySelectedInFull}
+                disabled={isBulkPaying || !payableSelectedIds.length}
+              >
+                {isBulkPaying ? "Оплачиваем..." : "Оплатить полностью"}
+              </Button>
+              {bulkError ? (
+                <p className="max-w-md text-sm text-red-600 dark:text-red-400">{bulkError}</p>
+              ) : null}
+            </div>
           ) : null}
         </div>
 

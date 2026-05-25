@@ -342,6 +342,62 @@ export async function addPaymentToRequest(id: string, input: unknown): Promise<v
   else await updateRequestById(db!, id, requestPayload)
 }
 
+function todayIsoDate(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date())
+  const get = (type: string) => parts.find((part) => part.type === type)?.value
+  return `${get("year")}-${get("month")}-${get("day")}`
+}
+
+export async function payRequestsInFull(ids: string[]): Promise<void> {
+  const session = await getCurrentSession()
+  if (session.source !== "mock") assertSupabaseWritesAllowed("Полная оплата выбранных заявок")
+  if (session.role !== "manager" && session.role !== "admin") throw new Error("Недостаточно прав")
+
+  const uniqueIds = [...new Set(ids.map((id) => id.trim()).filter(Boolean))]
+  if (!uniqueIds.length) throw new Error("Выберите заявки для оплаты.")
+
+  const db = session.source === "mock" ? null : await getSupabaseForData()
+  const paidAt = todayIsoDate()
+
+  for (const id of uniqueIds) {
+    const existing = session.source === "mock"
+      ? await fetchMockRequestById(id)
+      : (await attachSupabasePayments(db!, [await fetchRequestById(db!, id)].filter(Boolean) as PaymentRequest[]))[0]
+    if (!existing) throw new Error("Заявка не найдена")
+    if (existing.status === "rejected") throw new Error("Отклонённую заявку нельзя оплатить.")
+
+    const paidBefore = getPaidAmountRub(existing)
+    const remaining = Math.max(0, Number(existing.amount_rub ?? 0) - paidBefore)
+    if (remaining <= 0) continue
+
+    const paymentPayload = {
+      request_id: id,
+      paid_at: paidAt,
+      amount_rub: remaining,
+      note: "Полная оплата выбранных заявок",
+      created_by: session.user?.id ?? null,
+    }
+
+    if (session.source === "mock") await insertMockPayment(paymentPayload)
+    else await insertPayment(db!, paymentPayload)
+
+    const requestPayload = {
+      paid_at: paidAt,
+      paid_amount_rub: paidBefore + remaining,
+      is_paid: true,
+      status: "paid",
+    }
+
+    if (session.source === "mock") await updateMockRequestById(id, requestPayload)
+    else await updateRequestById(db!, id, requestPayload)
+  }
+}
+
 export async function cancelPaymentInRequest(id: string, paymentId: string): Promise<void> {
   const session = await getCurrentSession()
   if (session.source !== "mock") assertSupabaseWritesAllowed("Отмена оплаты")

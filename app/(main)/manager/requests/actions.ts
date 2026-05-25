@@ -6,6 +6,7 @@ import {
   addPaymentToPaymentRequest,
   cancelPaymentRequestPayment,
   managerUpdatePaymentRequest,
+  payPaymentRequestsInFull,
   softDeletePaymentRequest,
 } from "@/lib/data/payment-requests"
 
@@ -68,6 +69,13 @@ export async function addPaymentToPaymentRequestAction(id: string, formData: For
 
 export async function cancelPaymentRequestPaymentAction(id: string, paymentId: string) {
   await cancelPaymentRequestPayment(id, paymentId)
+  revalidatePath("/manager/requests")
+  revalidatePath("/manager/analytics")
+  revalidatePath("/employee/requests")
+}
+
+export async function paySelectedPaymentRequestsInFullAction(ids: string[]) {
+  await payPaymentRequestsInFull(ids)
   revalidatePath("/manager/requests")
   revalidatePath("/manager/analytics")
   revalidatePath("/employee/requests")
