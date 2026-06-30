@@ -6,6 +6,7 @@ const TABLES = [
   "profiles",
   "finance_groups",
   "payment_requests",
+  "payment_request_payments",
   "payment_request_audit",
 ]
 

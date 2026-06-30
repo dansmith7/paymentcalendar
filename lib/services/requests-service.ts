@@ -21,6 +21,7 @@ import {
   findFinanceGroupName,
   insertPayment,
   insertRequest,
+  payRequestsInFullByIds,
   softDeleteRequestById,
   updateOwnRequestById,
   updateRequestById,
@@ -361,13 +362,15 @@ export async function payRequestsInFull(ids: string[]): Promise<void> {
   const uniqueIds = [...new Set(ids.map((id) => id.trim()).filter(Boolean))]
   if (!uniqueIds.length) throw new Error("Выберите заявки для оплаты.")
 
-  const db = session.source === "mock" ? null : await getSupabaseForData()
   const paidAt = todayIsoDate()
 
+  if (session.source !== "mock") {
+    await payRequestsInFullByIds(await createClient(), uniqueIds, paidAt)
+    return
+  }
+
   for (const id of uniqueIds) {
-    const existing = session.source === "mock"
-      ? await fetchMockRequestById(id)
-      : (await attachSupabasePayments(db!, [await fetchRequestById(db!, id)].filter(Boolean) as PaymentRequest[]))[0]
+    const existing = await fetchMockRequestById(id)
     if (!existing) throw new Error("Заявка не найдена")
     if (existing.status === "rejected") throw new Error("Отклонённую заявку нельзя оплатить.")
 
@@ -383,8 +386,7 @@ export async function payRequestsInFull(ids: string[]): Promise<void> {
       created_by: session.user?.id ?? null,
     }
 
-    if (session.source === "mock") await insertMockPayment(paymentPayload)
-    else await insertPayment(db!, paymentPayload)
+    await insertMockPayment(paymentPayload)
 
     const requestPayload = {
       paid_at: paidAt,
@@ -393,8 +395,7 @@ export async function payRequestsInFull(ids: string[]): Promise<void> {
       status: "paid",
     }
 
-    if (session.source === "mock") await updateMockRequestById(id, requestPayload)
-    else await updateRequestById(db!, id, requestPayload)
+    await updateMockRequestById(id, requestPayload)
   }
 }
 

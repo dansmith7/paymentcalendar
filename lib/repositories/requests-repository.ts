@@ -90,6 +90,19 @@ export async function cancelPaymentById(
   if (error) throw new Error(error.message)
 }
 
+export async function payRequestsInFullByIds(
+  db: SupabaseClient,
+  ids: string[],
+  paidAt: string,
+): Promise<void> {
+  assertSupabaseWritesAllowed("Полная оплата выбранных заявок")
+  const { error } = await db.rpc("pay_payment_requests_in_full", {
+    request_ids: ids,
+    paid_on: paidAt,
+  })
+  if (error) throw new Error(error.message)
+}
+
 export async function fetchMyRequests(
   db: SupabaseClient,
   applicantId: string,
